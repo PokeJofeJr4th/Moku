@@ -1,11 +1,8 @@
 # Editor Files
 .vscode/
 
-# Library Files
-rsv.h
-
 # Data Files
-*.rsv
+*.moku
 
 # Prerequisites
 *.d

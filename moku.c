@@ -24,7 +24,22 @@ int add_ingredient(struct Pantry *pantry)
     char *name = malloc(strlen(buf) + 1);
     strcpy(name, buf);
 
-    struct Ingredient ingredient = ingredient_new(name);
+    // get the unit
+    puts("Unit of measure:");
+    fgets(buf, BUFSIZE, stdin);
+    // cut off at a newline
+    for (char *i = buf; *i; i++)
+    {
+        if (*i == '\n')
+        {
+            *i = 0;
+            break;
+        }
+    }
+    char *unit = malloc(strlen(buf) + 1);
+    strcpy(unit, buf);
+
+    struct Ingredient ingredient = ingredient_new(name, unit);
 
     puts("Calories:");
     fscanf(stdin, "%f", &input_value);
@@ -47,9 +62,17 @@ int add_ingredient(struct Pantry *pantry)
 
 int main()
 {
-    FILE *file = fopen("moku.rsv", "r");
-    struct Pantry pantry = pantry_from_rsv(file);
-    fclose(file);
+    FILE *file = fopen("pantry.moku", "r");
+    struct Pantry pantry;
+    if (file == NULL)
+    {
+        pantry = pantry_new();
+    }
+    else
+    {
+        pantry = pantry_read(file);
+        fclose(file);
+    }
 
     char buf[BUFSIZE + 1];
 
@@ -66,10 +89,10 @@ int main()
         }
         else if (strcmp(buf, "quit\n") == 0)
         {
-            file = fopen("moku.rsv", "w");
+            file = fopen("pantry.moku", "w");
             for (int i = 0; i < pantry.size; i++)
             {
-                food_rsv_write(&pantry.items[i], file);
+                food_write(&pantry.items[i], file);
             }
             fclose(file);
             break;

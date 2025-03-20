@@ -13,6 +13,8 @@ struct FoodHeader
     enum FoodType type;
     /// @brief owned string describing the name of the meal
     char *name;
+    /// @brief owned string describing the unit used in the meal
+    char *unit;
 };
 
 struct Ingredient
@@ -28,10 +30,11 @@ struct Ingredient
     float carbs;
 };
 
-struct Ingredient ingredient_new(char *name)
+struct Ingredient ingredient_new(char *name, char *unit)
 {
     struct Ingredient this;
     this.head.name = name;
+    this.head.unit = unit;
     this.head.type = FT_Ingredient;
     this.price = 0;
     this.calories = 0;
@@ -77,10 +80,11 @@ struct Meal
     } *ingredients;
 };
 
-struct Meal meal_new(char *name)
+struct Meal meal_new(char *name, char *unit)
 {
     struct Meal this;
     this.head.name = name;
+    this.head.unit = unit;
     this.head.type = FT_Meal;
     this.ingredients_count = 0;
     this.ingredients_capacity = 1;
@@ -201,8 +205,9 @@ float food_price(union Food *this, struct Pantry *pantry)
 
 void print_food(union Food *this, struct Pantry *pantry)
 {
-    printf("%-16s $%-5.2f %-4.0f %-5.2fg %-5.2fg\n",
+    printf("%-16s %-8s $%-5.2f %-4.0f %-5.2fg %-5.2fg\n",
            this->header.name,
+           this->header.unit,
            food_price(this, pantry),
            food_calories(this, pantry),
            food_carbs(this, pantry),
@@ -211,98 +216,104 @@ void print_food(union Food *this, struct Pantry *pantry)
 
 void print_pantry(struct Pantry *pantry)
 {
-    printf("Name             Cost   Cal  Carbs  Protein\n");
+    printf("Name             Unit     Cost   Cal  Carbs  Protein\n");
     for (int i = 0; i < pantry->size; i++)
     {
         print_food(pantry_get(pantry, i), pantry);
     }
 }
 
-void food_rsv_write(union Food *this, FILE *file)
+int food_write(union Food *this, FILE *file)
 {
-    char buf[BUFSIZE + 1];
-    rsv_write_field(this->header.name, file);
+    int end_marker = -1;
+    fputs(this->header.name, file);
+    fputc(0, file);
+    fputs(this->header.unit, file);
+    fputc(0, file);
     switch (this->header.type)
     {
     case FT_Ingredient:
-        rsv_write_field("Ingredient", file);
-        sprintf_s(buf, BUFSIZE, "%f", this->ingredient.calories);
-        // puts(buf);
-        rsv_write_field(buf, file);
-        sprintf_s(buf, BUFSIZE, "%f", this->ingredient.carbs);
-        // puts(buf);
-        rsv_write_field(buf, file);
-        sprintf_s(buf, BUFSIZE, "%f", this->ingredient.protein);
-        // puts(buf);
-        rsv_write_field(buf, file);
-        sprintf_s(buf, BUFSIZE, "%f", this->ingredient.price);
-        // puts(buf);
-        rsv_write_field(buf, file);
-        break;
+        fputc(1, file);
+        fwrite(&this->ingredient.calories, sizeof(this->ingredient.calories), 1, file);
+        fwrite(&this->ingredient.carbs, sizeof(this->ingredient.carbs), 1, file);
+        fwrite(&this->ingredient.protein, sizeof(this->ingredient.protein), 1, file);
+        fwrite(&this->ingredient.price, sizeof(this->ingredient.price), 1, file);
+        return 0;
     case FT_Meal:
-        rsv_write_field("Meal", file);
-        for (int i = 0; i < this->meal.ingredients_count; i++)
-        {
-            sprintf_s(buf, BUFSIZE, "%i", this->meal.ingredients->food_id);
-            // puts(buf);
-            rsv_write_field(buf, file);
-            sprintf_s(buf, BUFSIZE, "%f", this->meal.ingredients->amount);
-            // puts(buf);
-            rsv_write_field(buf, file);
-        }
-        break;
+        fputc(2, file);
+        fwrite(&this->meal.ingredients, sizeof(*this->meal.ingredients), this->meal.ingredients_count, file);
+        fwrite(&end_marker, sizeof(*this->meal.ingredients), 1, file);
+        return 0;
+    default:
+        return -1;
     }
-    rsv_finish_row(file);
 }
 
-int food_from_rsv(struct RsvRow *row, union Food *out)
+char *read_string(FILE *file)
 {
-    if (row->num_fields < 3)
+    char buf[BUFSIZE];
+    int c;
+    for (int i = 0; i < BUFSIZE; i++)
     {
-        return -1;
-    }
-    if (strcmp(row->fields[1], "Meal") == 0)
-    {
-        struct Meal m = meal_new(strdup(row->fields[0]));
-        for (int i = 2; i < row->num_fields; i += 2)
+        c = fgetc(file);
+        if (c == EOF)
         {
-            meal_push(&m, atoi(row->fields[i]), atof(row->fields[i + 1]));
+            return NULL;
         }
-        *out = meal_to_food(m);
-    }
-    else if (strcmp(row->fields[1], "Ingredient") == 0)
-    {
-        struct Ingredient i = ingredient_new(strdup(row->fields[0]));
-        if (row->num_fields != 6)
+        if (i < BUFSIZE)
         {
-            return -1;
+            buf[i] = c;
         }
-        i.calories = atof(row->fields[2]);
-        i.carbs = atof(row->fields[3]);
-        i.protein = atof(row->fields[4]);
-        i.price = atof(row->fields[5]);
-        *out = ingredient_to_food(i);
+        if (c == 0)
+        {
+            break;
+        }
     }
-    else
-    {
-        return -1;
-    }
-    return 0;
+    buf[BUFSIZE - 1] = 0;
+    return strdup(buf);
 }
 
-struct Pantry pantry_from_rsv(FILE *file)
+int food_read(union Food *food, FILE *file)
+{
+    int meal_id;
+    float meal_amount;
+    char *name = read_string(file);
+    char *unit = read_string(file);
+    if (name == NULL || unit == NULL)
+        return 0;
+    food->header.name = name;
+    food->header.unit = unit;
+    switch (fgetc(file))
+    {
+    case 1:
+        food->header.type = FT_Ingredient;
+        fread(&food->ingredient.calories, sizeof(food->ingredient.calories), 1, file);
+        fread(&food->ingredient.carbs, sizeof(food->ingredient.carbs), 1, file);
+        fread(&food->ingredient.protein, sizeof(food->ingredient.protein), 1, file);
+        fread(&food->ingredient.price, sizeof(food->ingredient.price), 1, file);
+        return 1;
+    case 2:
+        food->header.type = FT_Meal;
+        fread(&meal_id, sizeof(int), 1, file);
+        while (meal_id != -1)
+        {
+            fread(&meal_amount, sizeof(float), 1, file);
+            meal_push(&food->meal, meal_id, meal_amount);
+            fread(&meal_id, sizeof(int), 1, file);
+        }
+        return 1;
+    default:
+        return -1;
+    }
+}
+
+struct Pantry pantry_read(FILE *file)
 {
     struct Pantry pantry = pantry_new();
-    struct RsvRow *row;
     union Food food;
-    while (1)
+    while (food_read(&food, file) == 1)
     {
-        row = rsv_read_row(file);
-        if (row == NULL)
-            break;
-        food_from_rsv(row, &food);
         pantry_push(&pantry, food);
-        free(row);
     }
     return pantry;
 }
