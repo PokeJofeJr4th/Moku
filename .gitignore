@@ -2,7 +2,7 @@
 .vscode/
 
 # Data Files
-*.moku
+moku.rsv
 
 # Prerequisites
 *.d

@@ -95,6 +95,18 @@ union Food *pantry_get(struct Pantry *this, int index)
     return &this->items[index];
 }
 
+union Food *pantry_search(struct Pantry *pantry, char *name)
+{
+    for (int i = 0; i < pantry->size; i++)
+    {
+        if (strcmp(name, pantry->items[i].header.name) == 0)
+        {
+            return &pantry->items[i];
+        }
+    }
+    return NULL;
+}
+
 void visit_food(union Food *this, struct Pantry *pantry, float multiplier, struct Nutrition *nutrients)
 {
     switch (this->header.type)

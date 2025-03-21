@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUFSIZE (16)
+#define BUFSIZE (32)
 
 enum FoodType
 {
@@ -76,5 +76,7 @@ struct Pantry
 struct Pantry pantry_new();
 struct Meal meal_new(char *name, char *unit);
 struct Ingredient ingredient_new(char *name, char *unit);
+
+int meal_push(struct Meal *this, int food_id, float amount);
 
 #endif

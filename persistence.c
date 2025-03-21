@@ -1,49 +1,8 @@
 #include "moku.h"
 
-/* FILE SPECIFICATION
-This section uses a C-like syntax to describe how the file is laid out
+#include <stdlib.h>
 
-struct MokuFile {
-    food_info foods[];
-}
-
-struct food_info {
-    utf8_info name;
-    utf8_info unit;
-    food_type type;
-    ingredient_info|meal_info info;
-}
-
-enum food_type (uint8) {
-    ingredient = 1;
-    meal = 2;
-}
-
-struct ingredient_info {
-    float32 price;
-    float32 calories;
-    float32 carbs;
-    float32 fat;
-    float32 protein;
-    float32 fiber;
-}
-
-struct meal_info {
-    byte num_ingredients;
-    meal_ingredient ingredients[num_ingredients];
-}
-
-struct meal_ingredient {
-    int32 id;
-    float32 quantity;
-}
-
-struct utf8_info {
-    uint8 size;
-    char content[size];
-}
-
-*/
+#include "rsv.h"
 
 void write_string(char *str, FILE *file)
 {
@@ -53,58 +12,59 @@ void write_string(char *str, FILE *file)
 
 int food_write(union Food *this, FILE *file)
 {
-    write_string(this->header.name, file);
-    write_string(this->header.unit, file);
-    fputc(this->header.type, file);
+    rsv_write_field(this->header.name, file);
+    rsv_write_field(this->header.unit, file);
     switch (this->header.type)
     {
     case FT_Ingredient:
-        printf("%d", sizeof(this->ingredient.nutrients));
-        fwrite(&this->ingredient.nutrients, sizeof(this->ingredient.nutrients), 1, file);
-        return 0;
+        rsv_write_field("I", file);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.price);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.calories);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.carbs);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.fat);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.protein);
+        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.fiber);
+        break;
     case FT_Meal:
-        fputc(this->meal.ingredients_count, file);
-        fwrite(&this->meal.ingredients, sizeof(*this->meal.ingredients), this->meal.ingredients_count, file);
-        return 0;
+        rsv_write_field("M", file);
+        for (int i = 0; i < this->meal.ingredients_count; i++)
+        {
+            rsv_fmt_field(file, "%i", this->meal.ingredients[i].food_id);
+            rsv_fmt_field(file, "%f", this->meal.ingredients[i].amount);
+        }
+        break;
     default:
         return -1;
     }
+    return rsv_finish_row(file);
 }
 
-char *read_string(FILE *file)
+void food_read(union Food *food, struct RsvRow *row)
 {
-    int len = fgetc(file);
-    char *buf = malloc(len + 1);
-    for (int i = 0; i < len; i++)
+    char *food_type = row->fields[2];
+    food->header.name = strdup(row->fields[0]);
+    food->header.unit = strdup(row->fields[1]);
+    if (strcmp(food_type, "I") == 0)
     {
-        buf[i] = fgetc(file);
+        food->header.type = FT_Ingredient;
+        sscanf(row->fields[3], "%f", &food->ingredient.nutrients.price);
+        sscanf(row->fields[4], "%f", &food->ingredient.nutrients.calories);
+        sscanf(row->fields[5], "%f", &food->ingredient.nutrients.carbs);
+        sscanf(row->fields[6], "%f", &food->ingredient.nutrients.fat);
+        sscanf(row->fields[7], "%f", &food->ingredient.nutrients.protein);
+        sscanf(row->fields[8], "%f", &food->ingredient.nutrients.fiber);
     }
-    buf[len] = 0;
-    return buf;
-}
-
-int food_read(union Food *food, FILE *file)
-{
-    char *name = read_string(file);
-    char *unit = read_string(file);
-    if (name == NULL || unit == NULL)
-        return 0;
-    food->header.name = name;
-    food->header.unit = unit;
-    food->header.type = (enum FoodType)fgetc(file);
-    switch (food->header.type)
+    else if (strcmp(food_type, "M") == 0)
     {
-    case FT_Ingredient:
-        fread(&food->ingredient.nutrients, sizeof(food->ingredient.nutrients), 1, file);
-        return 1;
-    case FT_Meal:
-        food->meal.ingredients_capacity = fgetc(file);
-        food->meal.ingredients_count = food->meal.ingredients_capacity;
-        food->meal.ingredients = malloc(sizeof(*food->meal.ingredients) * food->meal.ingredients_count);
-        fread(food->meal.ingredients, sizeof(*food->meal.ingredients), food->meal.ingredients_count, file);
-        return 1;
-    default:
-        return -1;
+        food->header.type = FT_Meal;
+        int id;
+        float amount;
+        for (int i = 0; i < row->num_fields; i += 2)
+        {
+            sscanf(row->fields[i], "%i", &id);
+            sscanf(row->fields[i + 1], "%f", &amount);
+            meal_push(&food->meal, id, amount);
+        }
     }
 }
 
@@ -112,9 +72,12 @@ struct Pantry pantry_read(FILE *file)
 {
     struct Pantry pantry = pantry_new();
     union Food food;
-    while (food_read(&food, file) == 1)
+    struct RsvTable *table = rsv_read_table(file);
+    for (int i = 0; i < table->num_rows; i++)
     {
+        food_read(&food, table->rows[i]);
         pantry_push(&pantry, food);
     }
+    free(table);
     return pantry;
 }
