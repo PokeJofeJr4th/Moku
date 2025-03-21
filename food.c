@@ -95,12 +95,14 @@ union Food *pantry_get(struct Pantry *this, int index)
     return &this->items[index];
 }
 
-union Food *pantry_search(struct Pantry *pantry, char *name)
+union Food *pantry_search(struct Pantry *pantry, char *name, int *index)
 {
     for (int i = 0; i < pantry->size; i++)
     {
         if (strcmp(name, pantry->items[i].header.name) == 0)
         {
+            if (index != NULL)
+                *index = i;
             return &pantry->items[i];
         }
     }
