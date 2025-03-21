@@ -28,18 +28,17 @@ void get_float(char *buf, float *out)
 int add_ingredient(struct Pantry *pantry)
 {
     char buf[BUFSIZE];
+    struct Ingredient ingredient = ingredient_new();
 
     // get the name
     puts("Ingredient name:");
     get_line(buf);
-    char *name = strdup(buf);
+    ingredient.head.name = strdup(buf);
 
     // get the unit
     puts("Unit of measure:");
     get_line(buf);
-    char *unit = strdup(buf);
-
-    struct Ingredient ingredient = ingredient_new(name, unit);
+    ingredient.head.unit = strdup(buf);
 
     puts("Cost ($):");
     get_float(buf, &ingredient.nutrients.price);
@@ -89,18 +88,17 @@ void input_meal_ingredients(struct Pantry *pantry, struct Meal *meal)
 int add_meal(struct Pantry *pantry)
 {
     char buf[BUFSIZE];
+    struct Meal meal = meal_new();
 
     // get the name
     puts("Meal name:");
     get_line(buf);
-    char *name = strdup(buf);
+    meal.head.name = strdup(buf);
 
     // get the unit
     puts("Unit of measure:");
     get_line(buf);
-    char *unit = strdup(buf);
-
-    struct Meal meal = meal_new(name, unit);
+    meal.head.unit = strdup(buf);
 
     input_meal_ingredients(pantry, &meal);
 
@@ -242,6 +240,7 @@ void remove_food(char *food_name, struct Pantry *pantry)
                     meal->ingredients[k - 1] = meal->ingredients[k];
                 }
                 meal->ingredients_count--;
+                j--;
             }
             else if (meal->ingredients[j].food_id > food_id)
             {
@@ -254,6 +253,18 @@ void remove_food(char *food_name, struct Pantry *pantry)
         pantry->items[i - 1] = pantry->items[i];
     }
     pantry->size--;
+}
+
+void print_food(char *name, struct Pantry *pantry)
+{
+    union Food *food = pantry_search(pantry, name, NULL);
+    if (food == NULL)
+    {
+        printf("Couldn't find food \"%s\"\n", name);
+        return;
+    }
+
+    print_food_long(food, pantry);
 }
 
 int main()
@@ -274,6 +285,7 @@ int main()
 
     while (1)
     {
+        printf("> ");
         get_line(buf);
         if (strcmp(buf, "ingredient") == 0 || strcmp(buf, "i") == 0)
         {
@@ -322,6 +334,14 @@ int main()
         else if (strncmp(buf, "remove ", 7) == 0)
         {
             remove_food(buf + 7, &pantry);
+        }
+        else if (strncmp(buf, "p ", 2) == 0)
+        {
+            print_food(buf + 2, &pantry);
+        }
+        else if (strncmp(buf, "print ", 6) == 0)
+        {
+            print_food(buf + 6, &pantry);
         }
         else
         {

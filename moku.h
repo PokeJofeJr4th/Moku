@@ -74,8 +74,8 @@ struct Pantry
 };
 
 struct Pantry pantry_new();
-struct Meal meal_new(char *name, char *unit);
-struct Ingredient ingredient_new(char *name, char *unit);
+struct Meal meal_new();
+struct Ingredient ingredient_new();
 
 int meal_push(struct Meal *this, int food_id, float amount);
 

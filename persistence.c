@@ -42,8 +42,6 @@ int food_write(union Food *this, FILE *file)
 void food_read(union Food *food, struct RsvRow *row)
 {
     char *food_type = row->fields[2];
-    food->header.name = strdup(row->fields[0]);
-    food->header.unit = strdup(row->fields[1]);
     if (strcmp(food_type, "I") == 0)
     {
         food->header.type = FT_Ingredient;
@@ -56,16 +54,18 @@ void food_read(union Food *food, struct RsvRow *row)
     }
     else if (strcmp(food_type, "M") == 0)
     {
-        food->header.type = FT_Meal;
+        food->meal = meal_new();
         int id;
         float amount;
-        for (int i = 0; i < row->num_fields; i += 2)
+        for (int i = 3; i < row->num_fields; i += 2)
         {
             sscanf(row->fields[i], "%i", &id);
             sscanf(row->fields[i + 1], "%f", &amount);
             meal_push(&food->meal, id, amount);
         }
     }
+    food->header.name = strdup(row->fields[0]);
+    food->header.unit = strdup(row->fields[1]);
 }
 
 struct Pantry pantry_read(FILE *file)

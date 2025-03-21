@@ -14,21 +14,17 @@ struct Nutrition nutrition_new()
     return nutrition;
 }
 
-struct Ingredient ingredient_new(char *name, char *unit)
+struct Ingredient ingredient_new()
 {
     struct Ingredient this;
-    this.head.name = name;
-    this.head.unit = unit;
     this.head.type = FT_Ingredient;
     this.nutrients = nutrition_new();
     return this;
 }
 
-struct Meal meal_new(char *name, char *unit)
+struct Meal meal_new()
 {
     struct Meal this;
-    this.head.name = name;
-    this.head.unit = unit;
     this.head.type = FT_Meal;
     this.ingredients_count = 0;
     this.ingredients_capacity = 1;
@@ -131,7 +127,7 @@ void visit_food(union Food *this, struct Pantry *pantry, float multiplier, struc
     }
 }
 
-void print_food(union Food *this, struct Pantry *pantry)
+void print_food_short(union Food *this, struct Pantry *pantry)
 {
     struct Nutrition nutrition = nutrition_new();
     visit_food(this, pantry, 1.0, &nutrition);
@@ -140,11 +136,43 @@ void print_food(union Food *this, struct Pantry *pantry)
            this->header.unit, nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
 }
 
+void print_food_long(union Food *this, struct Pantry *pantry)
+{
+    struct Nutrition nutrition = nutrition_new();
+    switch (this->header.type)
+    {
+    case FT_Meal:
+        printf("                                Price  Cal  Carbs  Fat    Prot  Fiber\n");
+        for (int i = 0; i < this->meal.ingredients_count; i++)
+        {
+            nutrition = nutrition_new();
+            union Food *food = pantry_get(pantry, this->meal.ingredients[i].food_id);
+            visit_food(food, pantry, this->meal.ingredients[i].amount, &nutrition);
+            printf("%-5.2f %-8s %-16s $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+                   this->meal.ingredients[i].amount,
+                   food->header.unit,
+                   food->header.name,
+                   nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
+        }
+        nutrition = nutrition_new();
+        visit_food(this, pantry, 1.0, &nutrition);
+        printf("\n               Total            $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+               nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
+        return;
+    case FT_Ingredient:
+        printf("Name             Unit     Cost   Cal  Carbs  Fat    Prot   Fiber\n");
+        visit_food(this, pantry, 1.0, &nutrition);
+        printf("%-16s %-8s $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+               this->header.name,
+               this->header.unit, nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
+    }
+}
+
 void print_pantry(struct Pantry *pantry)
 {
-    printf("Name             Unit     Cost   Cal  Carbs  Fat   Protein  Fiber\n");
+    printf("Name             Unit     Cost   Cal  Carbs  Fat    Prot   Fiber\n");
     for (int i = 0; i < pantry->size; i++)
     {
-        print_food(pantry_get(pantry, i), pantry);
+        print_food_short(pantry_get(pantry, i), pantry);
     }
 }
