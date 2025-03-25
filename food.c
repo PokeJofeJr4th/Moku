@@ -142,13 +142,13 @@ void print_food_long(union Food *this, struct Pantry *pantry)
     switch (this->header.type)
     {
     case FT_Meal:
-        printf("                                Price  Cal  Carbs  Fat    Prot  Fiber\n");
+        printf("                                Price   Cal   Carbs   Fat     Prot   Fiber\n");
         for (int i = 0; i < this->meal.ingredients_count; i++)
         {
             nutrition = nutrition_new();
             union Food *food = pantry_get(pantry, this->meal.ingredients[i].food_id);
             visit_food(food, pantry, this->meal.ingredients[i].amount, &nutrition);
-            printf("%-5.2f %-8s %-16s $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+            printf("%-5.2f %-8s %-16s $%-6.2f %-5.0f %-6.2fg %-6.2fg %-6.2fg %-6.2fg\n",
                    this->meal.ingredients[i].amount,
                    food->header.unit,
                    food->header.name,
@@ -156,21 +156,26 @@ void print_food_long(union Food *this, struct Pantry *pantry)
         }
         nutrition = nutrition_new();
         visit_food(this, pantry, 1.0, &nutrition);
-        printf("\n               Total            $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+        printf("\n               Total            $%-6.2f %-5.0f %-6.2fg %-6.2fg %-6.2fg %-6.2fg\n",
                nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
         return;
     case FT_Ingredient:
-        printf("Name             Unit     Cost   Cal  Carbs  Fat    Prot   Fiber\n");
+        printf("Name             Unit     Cost    Cal   Carbs   Fat     Prot     Fiber\n");
         visit_food(this, pantry, 1.0, &nutrition);
-        printf("%-16s %-8s $%-5.2f %-4.0f %-5.2fg %-5.2fg %-5.2fg %-5.2fg\n",
+        printf("%-16s %-8s $%-6.2f %-5.0f %-6.2fg %-6.2fg %-6.2fg %-6.2fg\n",
                this->header.name,
                this->header.unit, nutrition.price, nutrition.calories, nutrition.carbs, nutrition.fat, nutrition.protein, nutrition.fiber);
     }
 }
 
-void print_pantry(struct Pantry *pantry)
+void print_pantry_header()
 {
     printf("Name             Unit     Cost   Cal  Carbs  Fat    Prot   Fiber\n");
+}
+
+void print_pantry(struct Pantry *pantry)
+{
+    print_pantry_header();
     for (int i = 0; i < pantry->size; i++)
     {
         print_food_short(pantry_get(pantry, i), pantry);

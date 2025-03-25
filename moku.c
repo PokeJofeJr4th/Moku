@@ -196,6 +196,28 @@ void edit_pantry(char *name, struct Pantry *pantry)
     }
 }
 
+int substr(const char *needle, const char *haystack)
+{
+    int n = strlen(needle);
+    while (*haystack++)
+        if (strncmp(needle, haystack, n) == 0)
+            return 1;
+    return 0;
+}
+
+void search_pantry(char *name, struct Pantry *pantry)
+{
+    print_pantry_header();
+    for (int i = 0; i < pantry->size; i++)
+    {
+        union Food *food = &pantry->items[i];
+        if (substr(name, food->header.name))
+        {
+            print_food_short(food, pantry);
+        }
+    }
+}
+
 void remove_food(char *food_name, struct Pantry *pantry)
 {
     char buf[BUFSIZE];
@@ -248,6 +270,12 @@ void remove_food(char *food_name, struct Pantry *pantry)
             }
         }
     }
+    free(food->header.name);
+    free(food->header.unit);
+    if (food->header.type == FT_Meal)
+    {
+        free(food->meal.ingredients);
+    }
     for (int i = food_id + 1; i < pantry->size; i++)
     {
         pantry->items[i - 1] = pantry->items[i];
@@ -297,7 +325,7 @@ int main()
         }
         else if (strcmp(buf, "help") == 0)
         {
-            printf("Moku\ningredient - add an ingredient\nhelp - display this message\nquit - exit the program\nls - list ingredients and meals in pantry\n");
+            printf("Moku\ningredient(i) - add an ingredient\nmeal(m) - add a meal\nhelp - display this message\nquit(q) - exit the program\nls - list ingredients and meals in pantry\nedit(e) <name> - edit a meal or ingredient\nremove(rm) <name> - remove an ingredient or meal\nprint(p) <name> - print a detailed view of an ingredient or meal\n");
         }
         else if (strcmp(buf, "quit") == 0 || strcmp(buf, "q") == 0)
         {
@@ -342,6 +370,14 @@ int main()
         else if (strncmp(buf, "print ", 6) == 0)
         {
             print_food(buf + 6, &pantry);
+        }
+        else if (strncmp(buf, "s ", 2) == 0)
+        {
+            search_pantry(buf + 2, &pantry);
+        }
+        else if (strncmp(buf, "search ", 7) == 0)
+        {
+            search_pantry(buf + 7, &pantry);
         }
         else
         {

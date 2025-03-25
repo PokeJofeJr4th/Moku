@@ -18,19 +18,19 @@ int food_write(union Food *this, FILE *file)
     {
     case FT_Ingredient:
         rsv_write_field("I", file);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.price);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.calories);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.carbs);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.fat);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.protein);
-        rsv_fmt_field(file, "%.2f", this->ingredient.nutrients.fiber);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.price);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.calories);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.carbs);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.fat);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.protein);
+        rsv_fmt_field(file, "%.3f", this->ingredient.nutrients.fiber);
         break;
     case FT_Meal:
         rsv_write_field("M", file);
         for (int i = 0; i < this->meal.ingredients_count; i++)
         {
             rsv_fmt_field(file, "%i", this->meal.ingredients[i].food_id);
-            rsv_fmt_field(file, "%f", this->meal.ingredients[i].amount);
+            rsv_fmt_field(file, "%.3f", this->meal.ingredients[i].amount);
         }
         break;
     default:
