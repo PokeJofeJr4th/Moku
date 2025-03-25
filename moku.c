@@ -19,10 +19,13 @@ void get_line(char *buf)
     }
 }
 
-void get_float(char *buf, float *out)
+int get_float(char *buf, float *out)
 {
     get_line(buf);
-    sscanf(buf, "%f", out);
+    if (*buf == 0)
+        return 0;
+    *out = atof(buf);
+    return 1;
 }
 
 int add_ingredient(struct Pantry *pantry)
@@ -41,22 +44,28 @@ int add_ingredient(struct Pantry *pantry)
     ingredient.head.unit = strdup(buf);
 
     puts("Cost ($):");
-    get_float(buf, &ingredient.nutrients.price);
+    while (!get_float(buf, &ingredient.nutrients.price))
+        ;
 
     puts("Calories:");
-    get_float(buf, &ingredient.nutrients.calories);
+    while (!get_float(buf, &ingredient.nutrients.calories))
+        ;
 
     puts("Carbs (g):");
-    get_float(buf, &ingredient.nutrients.carbs);
+    while (!get_float(buf, &ingredient.nutrients.carbs))
+        ;
 
     puts("Fat (g):");
-    get_float(buf, &ingredient.nutrients.fat);
+    while (!get_float(buf, &ingredient.nutrients.fat))
+        ;
 
     puts("Protein (g):");
-    get_float(buf, &ingredient.nutrients.protein);
+    while (!get_float(buf, &ingredient.nutrients.protein))
+        ;
 
     puts("Fiber (g):");
-    get_float(buf, &ingredient.nutrients.fiber);
+    while (!get_float(buf, &ingredient.nutrients.fiber))
+        ;
 
     return pantry_push(pantry, ingredient_to_food(ingredient));
 }
@@ -105,10 +114,18 @@ int add_meal(struct Pantry *pantry)
     return pantry_push(pantry, meal_to_food(meal));
 }
 
+void remove_ingredient_from_meal(struct Meal *meal, int id)
+{
+    for (int i = id + 1; i < meal->ingredients_count; i++)
+    {
+        meal->ingredients[i - 1] = meal->ingredients[i];
+    }
+    meal->ingredients_count--;
+}
+
 void edit_pantry(char *name, struct Pantry *pantry)
 {
     char buf[BUFSIZE];
-    float input_value;
     union Food *food = pantry_search(pantry, name, NULL);
 
     if (food == NULL)
@@ -137,58 +154,27 @@ void edit_pantry(char *name, struct Pantry *pantry)
     {
     case FT_Ingredient:
         puts("Price: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.price = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.price);
         puts("Calories: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.calories = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.calories);
         puts("Carbs: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.carbs = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.carbs);
         puts("Fat: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.fat = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.fat);
         puts("Protein: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.protein = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.protein);
         puts("Fiber: (empty to cancel)");
-        get_line(buf);
-        if (buf[0] != 0)
-        {
-            if (sscanf(buf, "%f", &input_value))
-                food->ingredient.nutrients.fiber = input_value;
-        }
+        get_float(buf, &food->ingredient.nutrients.fiber);
         break;
     case FT_Meal:
         for (int i = 0; i < food->meal.ingredients_count; i++)
         {
             union Food *current_ingredient = pantry_get(pantry, food->meal.ingredients[i].food_id);
             printf("%s quantity (%s): (empty to cancel)\n", current_ingredient->header.name, current_ingredient->header.unit);
-            get_line(buf);
-            if (buf[0] != 0)
+            get_float(buf, &food->meal.ingredients[i].amount);
+            if (food->meal.ingredients[i].amount == 0)
             {
-                if (sscanf(buf, "%f", &input_value))
-                    food->meal.ingredients[i].amount = input_value;
+                remove_ingredient_from_meal(&food->meal, i--);
             }
         }
         input_meal_ingredients(pantry, &food->meal);
@@ -257,12 +243,7 @@ void remove_food(char *food_name, struct Pantry *pantry)
         {
             if (meal->ingredients[j].food_id == food_id)
             {
-                for (int k = j + 1; k < meal->ingredients_count; k++)
-                {
-                    meal->ingredients[k - 1] = meal->ingredients[k];
-                }
-                meal->ingredients_count--;
-                j--;
+                remove_ingredient_from_meal(meal, j--);
             }
             else if (meal->ingredients[j].food_id > food_id)
             {
