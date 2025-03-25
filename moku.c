@@ -21,11 +21,29 @@ void get_line(char *buf)
 
 int get_float(char *buf, float *out)
 {
+    float a, b;
+    char op;
     get_line(buf);
     if (*buf == 0)
         return 0;
-    *out = atof(buf);
-    return 1;
+    if (sscanf(buf, "%f%c%f", &a, &op, &b) == 3)
+    {
+        switch (op)
+        {
+        case '*':
+            *out = a * b;
+            return 1;
+        case '/':
+            *out = a / b;
+            return 1;
+        default:
+            return 0;
+        }
+    }
+    else if (sscanf(buf, "%f", out) == 1)
+        return 1;
+    else
+        return 0;
 }
 
 int add_ingredient(struct Pantry *pantry)
@@ -134,7 +152,7 @@ void edit_pantry(char *name, struct Pantry *pantry)
         return;
     }
 
-    puts("Ingredient name: (empty to cancel)");
+    puts("Item name: (empty to cancel)");
     get_line(buf);
     if (buf[0] != 0)
     {
@@ -142,7 +160,7 @@ void edit_pantry(char *name, struct Pantry *pantry)
         food->header.name = strdup(buf);
     }
 
-    puts("Ingredient unit: (empty to cancel)");
+    puts("Item unit: (empty to cancel)");
     get_line(buf);
     if (buf[0] != 0)
     {
