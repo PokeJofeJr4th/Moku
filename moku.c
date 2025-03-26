@@ -198,15 +198,6 @@ void edit_pantry(char *name, struct Pantry *pantry)
     }
 }
 
-int substr(const char *needle, const char *haystack)
-{
-    int n = strlen(needle);
-    while (*haystack++)
-        if (strnicmp(needle, haystack, n) == 0)
-            return 1;
-    return 0;
-}
-
 void search_pantry(char *name, struct Pantry *pantry)
 {
     print_pantry_header();

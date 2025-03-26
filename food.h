@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "helper.h"
 
 enum FoodType
 {
@@ -92,5 +93,4 @@ void visit_food(union Food *this, struct Pantry *pantry, float multiplier, struc
 void print_food_short(union Food *this, struct Pantry *pantry);
 void print_food_long(union Food *this, struct Pantry *pantry);
 
-int substr(const char *needle, const char *haystack);
 #endif
