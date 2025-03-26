@@ -1,4 +1,4 @@
-#include "moku.h"
+#include "food.h"
 
 struct Pantry;
 
@@ -82,20 +82,25 @@ int pantry_push(struct Pantry *this, union Food item)
     return this->size++;
 }
 
-union Food *pantry_get(struct Pantry *this, int index)
+union Food *pantry_find(struct Pantry *pantry, char *name, int *index)
 {
-    if (index >= this->capacity)
+    for (int i = 0; i < pantry->size; i++)
     {
-        return NULL;
+        if (strcmp(name, pantry->items[i].header.name) == 0)
+        {
+            if (index != NULL)
+                *index = i;
+            return &pantry->items[i];
+        }
     }
-    return &this->items[index];
+    return NULL;
 }
 
 union Food *pantry_search(struct Pantry *pantry, char *name, int *index)
 {
     for (int i = 0; i < pantry->size; i++)
     {
-        if (strcmp(name, pantry->items[i].header.name) == 0)
+        if (substr(name, pantry->items[i].header.name) == 0)
         {
             if (index != NULL)
                 *index = i;
@@ -121,7 +126,7 @@ void visit_food(union Food *this, struct Pantry *pantry, float multiplier, struc
         for (int i = 0; i < this->meal.ingredients_count; i++)
         {
             visit_food(
-                pantry_get(pantry, this->meal.ingredients[i].food_id), pantry, multiplier * this->meal.ingredients[i].amount, nutrients);
+                &pantry->items[this->meal.ingredients[i].food_id], pantry, multiplier * this->meal.ingredients[i].amount, nutrients);
         }
         return;
     }
@@ -146,7 +151,7 @@ void print_food_long(union Food *this, struct Pantry *pantry)
         for (int i = 0; i < this->meal.ingredients_count; i++)
         {
             nutrition = nutrition_new();
-            union Food *food = pantry_get(pantry, this->meal.ingredients[i].food_id);
+            union Food *food = &pantry->items[this->meal.ingredients[i].food_id];
             visit_food(food, pantry, this->meal.ingredients[i].amount, &nutrition);
             printf("%-5.2f %-8s %-16s $%-6.2f %-5.0f %-6.2fg %-6.2fg %-6.2fg %-6.2fg\n",
                    this->meal.ingredients[i].amount,
@@ -178,6 +183,6 @@ void print_pantry(struct Pantry *pantry)
     print_pantry_header();
     for (int i = 0; i < pantry->size; i++)
     {
-        print_food_short(pantry_get(pantry, i), pantry);
+        print_food_short(&pantry->items[i], pantry);
     }
 }

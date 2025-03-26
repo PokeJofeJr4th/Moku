@@ -2,7 +2,6 @@
 
 #include "moku.h"
 
-#include "food.c"
 #include "persistence.c"
 
 void get_line(char *buf)
@@ -26,6 +25,7 @@ int get_float(char *buf, float *out)
     get_line(buf);
     if (*buf == 0)
         return 0;
+    // scuffed expression parsing
     if (sscanf(buf, "%f%c%f", &a, &op, &b) == 3)
     {
         switch (op)
@@ -99,7 +99,7 @@ void input_meal_ingredients(struct Pantry *pantry, struct Meal *meal)
         get_line(buf);
         if (buf[0] == 0)
             break;
-        union Food *ingredient = pantry_search(pantry, buf, &input_id);
+        union Food *ingredient = pantry_find(pantry, buf, &input_id);
         if (ingredient == NULL)
         {
             printf("Couldn't find ingredint \"%s\"\n", buf);
@@ -144,7 +144,7 @@ void remove_ingredient_from_meal(struct Meal *meal, int id)
 void edit_pantry(char *name, struct Pantry *pantry)
 {
     char buf[BUFSIZE];
-    union Food *food = pantry_search(pantry, name, NULL);
+    union Food *food = pantry_find(pantry, name, NULL);
 
     if (food == NULL)
     {
@@ -187,7 +187,7 @@ void edit_pantry(char *name, struct Pantry *pantry)
     case FT_Meal:
         for (int i = 0; i < food->meal.ingredients_count; i++)
         {
-            union Food *current_ingredient = pantry_get(pantry, food->meal.ingredients[i].food_id);
+            union Food *current_ingredient = &pantry->items[food->meal.ingredients[i].food_id];
             printf("%s quantity (%s): (empty to cancel)\n", current_ingredient->header.name, current_ingredient->header.unit);
             get_float(buf, &food->meal.ingredients[i].amount);
             if (food->meal.ingredients[i].amount == 0)
@@ -204,7 +204,7 @@ int substr(const char *needle, const char *haystack)
 {
     int n = strlen(needle);
     while (*haystack++)
-        if (strncmp(needle, haystack, n) == 0)
+        if (strnicmp(needle, haystack, n) == 0)
             return 1;
     return 0;
 }
@@ -226,16 +226,21 @@ void remove_food(char *food_name, struct Pantry *pantry)
 {
     char buf[BUFSIZE];
     int food_id;
-    union Food *food = pantry_search(pantry, food_name, &food_id);
+    union Food *food = pantry_find(pantry, food_name, &food_id);
     if (food == NULL)
     {
         printf("Couldn't find food \"%s\"\n", food_name);
+        if (pantry_search(pantry, food_name, NULL) != NULL)
+        {
+            puts("Did you mean one of these?");
+            search_pantry(food_name, pantry);
+        }
         return;
     }
     int num_refs = 0;
     for (int i = 0; i < pantry->size; i++)
     {
-        union Food *current = pantry_get(pantry, i);
+        union Food *current = &pantry->items[i];
         if (current->header.type != FT_Meal)
             continue;
         for (int j = 0; j < current->meal.ingredients_count; j++)
@@ -253,7 +258,7 @@ void remove_food(char *food_name, struct Pantry *pantry)
     }
     for (int i = 0; i < pantry->size; i++)
     {
-        union Food *current = pantry_get(pantry, i);
+        union Food *current = &pantry->items[i];
         if (current->header.type != FT_Meal)
             continue;
         struct Meal *meal = &current->meal;
@@ -284,7 +289,7 @@ void remove_food(char *food_name, struct Pantry *pantry)
 
 void print_food(char *name, struct Pantry *pantry)
 {
-    union Food *food = pantry_search(pantry, name, NULL);
+    union Food *food = pantry_find(pantry, name, NULL);
     if (food == NULL)
     {
         printf("Couldn't find food \"%s\"\n", name);
