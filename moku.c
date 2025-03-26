@@ -2,8 +2,6 @@
 
 #include "moku.h"
 
-#include "persistence.c"
-
 void get_line(char *buf)
 {
     fgets(buf, BUFSIZE, stdin);

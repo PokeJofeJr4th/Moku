@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "rsv.h"
+#include "persistence.h"
 
 void write_string(char *str, FILE *file)
 {

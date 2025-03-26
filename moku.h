@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "food.h"
+#include "persistence.h"
 
 #define BUFSIZE (32)
 
